@@ -222,3 +222,5 @@ node_modules/
 backend/data/*.db
 backend/data/*.db-*
 frontend/dist/
+
+.env
