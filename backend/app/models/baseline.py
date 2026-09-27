@@ -21,6 +21,8 @@ def _sma(closes: list[float], n: int) -> float | None:
 @register_model("baseline")
 class BaselineModel(DecisionModel):
     def __init__(self, cfg):
+        if not cfg.model:
+            cfg = cfg.model_copy(update={"model": "sma_cross"})
         super().__init__(cfg)
         if cfg.model not in STRATEGIES:
             raise ValueError(f"baseline model must be one of {STRATEGIES}")

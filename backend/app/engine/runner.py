@@ -154,14 +154,17 @@ class AgentRunner:
             self._set_status("running")
 
             decisions = 0
+            failed_in_row = 0
             for idx in range(start, len(self.candles) - 1):
                 if cfg.run.max_steps is not None and decisions >= cfg.run.max_steps:
                     break
                 await self._gate()
                 rec = None
+                fatal = False
                 if (idx - start) % max(1, cfg.run.decide_every) == 0:
-                    rec = await self._decide(idx, decisions, featurizer, questions, model)
+                    rec, fatal, call_failed = await self._decide(idx, decisions, featurizer, questions, model)
                     decisions += 1
+                    failed_in_row = failed_in_row + 1 if call_failed else 0
                     if self._step_budget is not None:
                         self._step_budget -= 1
                 nxt = self.candles[idx + 1]
@@ -183,6 +186,10 @@ class AgentRunner:
                     "step": self._light(rec) if rec is not None else None,
                     "metrics": self.metrics,
                 })
+                if rec is not None and fatal:
+                    raise RuntimeError(f"stopped on step {rec.step}: {rec.error}")
+                if failed_in_row >= cfg.run.max_consecutive_errors > 0:
+                    raise RuntimeError(f"stopped after {failed_in_row} failed calls in a row; last: {rec.error if rec else ''}")
                 await asyncio.sleep(cfg.run.delay_ms / 1000 if cfg.run.delay_ms else 0)
 
             self._update_metrics()
@@ -204,7 +211,8 @@ class AgentRunner:
             if model is not None:
                 await model.aclose()
 
-    async def _decide(self, idx, step_no, featurizer, questions, model) -> StepRecord:
+    async def _decide(self, idx, step_no, featurizer, questions, model) -> tuple[StepRecord, bool, bool]:
+        """-> (record, fatal, call_failed). Model failures become a logged "hold" step."""
         assert self.broker is not None
         c = self.candles[idx]
         view = PortfolioView(position=self.broker.position, cash=self.broker.cash,
@@ -214,10 +222,11 @@ class AgentRunner:
         error: Optional[str] = None
         req: Any = None
         resp: Any = None
+        fatal = call_failed = False
         try:
             result = await model.decide(state, questions, ctx)
         except ModelError as e:
-            error, req, resp = str(e), e.request, e.response
+            error, req, resp, fatal, call_failed = str(e), e.request, e.response, e.fatal, True
             result = ModelResult(answers={}, latency_ms=e.latency_ms, request=req, response=resp,
                                  cost_usd=model.compute_cost(e.latency_ms))
         action, size, forecast = decision.resolve(questions, result, self.cfg.broker.default_size_pct)
@@ -225,7 +234,7 @@ class AgentRunner:
             missing = [q.id for q in questions if q.role and q.id not in result.answers]
             if missing:
                 error = f"no valid answer for: {', '.join(missing)} (treated as hold/default)"
-        return StepRecord(
+        rec = StepRecord(
             agent_id=self.cfg.id, run_id=self.run_id or "", step=step_no, idx=idx, ts=c.ts, price=c.close,
             action=action, size_pct=size, forecast=forecast,
             forecast_probs=decision.forecast_probs(questions, result),
@@ -233,6 +242,7 @@ class AgentRunner:
             cost_usd=result.cost_usd, latency_ms=result.latency_ms, usage=result.usage, error=error,
             request=result.request, response=result.response,
         )
+        return rec, fatal, call_failed
 
     def _update_metrics(self) -> None:
         if not self.broker:

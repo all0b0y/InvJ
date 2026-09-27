@@ -33,11 +33,15 @@ class DecideContext:
 class ModelError(RuntimeError):
     """A model call failed; carries whatever was sent/received for the log."""
 
-    def __init__(self, msg: str, request: Any = None, response: Any = None, latency_ms: float = 0.0):
+    def __init__(self, msg: str, request: Any = None, response: Any = None, latency_ms: float = 0.0,
+                 fatal: bool = False):
         super().__init__(msg)
         self.request = request
         self.response = response
         self.latency_ms = latency_ms
+        # Fatal = retrying on the next candle cannot help (bad key, no credits, unknown model):
+        # the run stops instead of logging hundreds of identical failed "hold" steps.
+        self.fatal = fatal
 
 
 class DecisionModel(ABC):
@@ -64,7 +68,7 @@ class DecisionModel(ABC):
         key = os.environ.get(self.cfg.api_key_env, "") if self.cfg.api_key_env else ""
         key = key or settings.openrouter_api_key
         if required and not key:
-            raise ModelError("no API key: set OPENROUTER_API_KEY in .env (or the agent's api_key_env)")
+            raise ModelError("no API key: set OPENROUTER_API_KEY in .env (or the agent's api_key_env)", fatal=True)
         return key or None
 
 
@@ -111,6 +115,7 @@ def from_jev_answers(raw: dict[str, Any]) -> dict[str, Answer]:
 # ---------------------------------------------------------------------- HTTP with retries
 
 _RETRY_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}
+_FATAL_STATUS = {401, 402, 403, 404}  # bad key, no credits, forbidden, unknown model/endpoint
 
 
 async def post_json(client: httpx.AsyncClient, url: str, payload: dict, headers: dict) -> tuple[dict, float]:
@@ -118,6 +123,7 @@ async def post_json(client: httpx.AsyncClient, url: str, payload: dict, headers:
     last_err: Optional[str] = None
     body: Any = None
     total_ms = 0.0
+    status = 0
     for attempt in range(settings.http_max_retries + 1):
         t0 = time.perf_counter()
         try:
@@ -131,6 +137,7 @@ async def post_json(client: httpx.AsyncClient, url: str, payload: dict, headers:
                 if not isinstance(body, dict):
                     raise ModelError("response is not a JSON object", payload, body, total_ms)
                 return body, total_ms
+            status = r.status_code
             last_err = f"HTTP {r.status_code}: {_err_text(body)}"
             if r.status_code not in _RETRY_STATUS:
                 break
@@ -139,7 +146,7 @@ async def post_json(client: httpx.AsyncClient, url: str, payload: dict, headers:
             last_err = f"{type(e).__name__}: {e}"
         if attempt < settings.http_max_retries:
             await asyncio.sleep(min(30.0, 2 ** attempt) * (0.5 + random.random()))
-    raise ModelError(last_err or "request failed", payload, body, total_ms)
+    raise ModelError(last_err or "request failed", payload, body, total_ms, fatal=status in _FATAL_STATUS)
 
 
 def _err_text(body: Any) -> str:

@@ -1,0 +1,28 @@
+services:
+  invj:
+    build:
+      context: .
+      args:
+        EXTRAS: ""        # "local" = also install Laya + GLiNER (torch, several GB)
+    ports: ["8000:8000"]
+    env_file: [.env]
+    volumes:
+      - invj-data:/app/backend/data   # SQLite history + uploaded CSVs
+      - hf-cache:/root/.cache/huggingface
+
+  # Optional: Laya as a separate Jev-protocol server; point an agent with
+  # provider "systemone" at http://laya:8001.  Start with: docker compose --profile laya up
+  laya:
+    profiles: ["laya"]
+    image: python:3.12-slim
+    command: sh -c "pip install --no-cache-dir 'laya[serve]' && laya-serve"
+    environment:
+      LAYA_PORT: "8001"
+      LAYA_MODELS: typed-decisions
+    ports: ["8001:8001"]
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+
+volumes:
+  invj-data:
+  hf-cache:

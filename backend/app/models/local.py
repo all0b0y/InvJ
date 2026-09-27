@@ -32,7 +32,7 @@ def _shared(key: tuple, factory: Callable[[], Any]) -> tuple[Any, threading.Lock
 
 
 def _missing(pkg: str) -> ModelError:
-    return ModelError(f"{pkg} is not installed. Run: pip install -e 'backend[{pkg}]' (needs torch)")
+    return ModelError(f"{pkg} is not installed. Run: pip install -e 'backend[{pkg}]' (needs torch)", fatal=True)
 
 
 class _LocalModel(DecisionModel):

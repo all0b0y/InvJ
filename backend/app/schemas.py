@@ -38,7 +38,7 @@ class ModelConfig(BaseModel):
     """
 
     provider: Literal["jev", "systemone", "laya", "gliner", "llm", "baseline"] = "baseline"
-    model: str = "sma_cross"
+    model: str = ""  # empty = the provider's default (Jev: ~typesafe/jev-latest, baseline: sma_cross, ...)
     base_url: Optional[str] = None
     # Name of an env var holding a per-agent key; falls back to OPENROUTER_API_KEY.
     api_key_env: Optional[str] = None
@@ -101,6 +101,7 @@ class RunConfig(BaseModel):
     max_steps: Optional[int] = None
     forecast_horizon: int = 5  # candles ahead used to score forecasts
     flat_threshold_pct: float = 0.1  # |move| below this counts as "flat"
+    max_consecutive_errors: int = 5  # stop the run after this many failed model calls in a row (0 = never)
 
 
 class AgentConfig(BaseModel):

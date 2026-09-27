@@ -85,6 +85,8 @@ class OpenRouterLLM(DecisionModel):
         return (self.cfg.base_url or settings.openrouter_base_url).rstrip("/") + "/v1/chat/completions"
 
     async def decide(self, state: FeatureState, questions: list[QuestionSpec], ctx: DecideContext) -> ModelResult:
+        if not self.cfg.model:
+            raise ModelError("llm provider needs a model id, e.g. anthropic/claude-haiku-4.5", fatal=True)
         p = self.cfg.params
         payload: dict[str, Any] = {
             "model": self.cfg.model,

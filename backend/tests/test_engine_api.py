@@ -87,6 +87,37 @@ async def test_model_errors_become_hold_and_are_logged(tmp_path, monkeypatch):
     assert r.metrics["cost"]["errors"] == 3
 
 
+def _patch_transport(monkeypatch, handler):
+    from app.models import systemone
+    orig = systemone._SystemOneBase.__init__
+
+    def init(self, cfg):
+        orig(self, cfg)
+        self.client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+
+    monkeypatch.setattr(systemone._SystemOneBase, "__init__", init)
+
+
+async def test_fatal_error_stops_run(tmp_path, monkeypatch):
+    _patch_transport(monkeypatch, lambda req: httpx.Response(402, json={"error": {"message": "Insufficient credits"}}))
+    m = Manager(Store(tmp_path / "e.db"))
+    r = m.create(_cfg(model=ModelConfig(provider="jev")))
+    r.start()
+    await _wait(r)
+    assert r.status == "error" and "Insufficient credits" in r.error
+    assert len(r.steps) == 1  # the failed call is still logged with its request/response
+    assert m.store.get_step(r.run_id, 0)["request"]["model"] == "~typesafe/jev-latest"
+
+
+async def test_consecutive_errors_stop_run(tmp_path, monkeypatch):
+    _patch_transport(monkeypatch, lambda req: httpx.Response(503, text="down"))
+    m = Manager(Store(tmp_path / "e.db"))
+    r = m.create(_cfg(model=ModelConfig(provider="jev"), run=RunConfig(max_consecutive_errors=4)))
+    r.start()
+    await _wait(r)
+    assert r.status == "error" and "4 failed calls in a row" in r.error and len(r.steps) == 4
+
+
 async def test_arena_shares_data(tmp_path):
     m = Manager(Store(tmp_path / "e.db"))
     a = m.create(_cfg(name="a"))

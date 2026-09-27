@@ -279,4 +279,6 @@ if settings.frontend_dist.exists():
 
     @app.get("/{path:path}", include_in_schema=False)
     async def spa(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(404, "not found")
         return FileResponse(settings.frontend_dist / "index.html")

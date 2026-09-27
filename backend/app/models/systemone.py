@@ -75,7 +75,7 @@ class SystemOneModel(_SystemOneBase):
 
     def endpoint(self) -> str:
         if not self.cfg.base_url:
-            raise ModelError("systemone provider needs base_url, e.g. http://localhost:8001 (laya-serve)")
+            raise ModelError("systemone provider needs base_url, e.g. http://localhost:8001 (laya-serve)", fatal=True)
         url = self.cfg.base_url.rstrip("/")
         return url if url.endswith("/v1/systemone") else url + "/v1/systemone"
 
