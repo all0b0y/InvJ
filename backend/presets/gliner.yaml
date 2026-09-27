@@ -1,0 +1,9 @@
+description: GLiNER как zero-shot классификатор (pip install -e 'backend[gliner]'). Слабый, но честный бейзлайн.
+name: GLiNER (local)
+model:
+  provider: gliner
+  model: urchade/gliner_medium-v2.1
+  cost_per_hour_usd: 0.20
+  params: {threshold: 0.05}
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}
+features: {window: 30}

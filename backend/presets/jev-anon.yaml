@@ -1,0 +1,7 @@
+description: Jev на анонимизированных данных (без тикера и дат, цены от 100) — проверка на "память" истории.
+name: Jev (anon)
+model:
+  provider: jev
+  model: "~typesafe/jev-latest"
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}
+features: {window: 30, anonymize: true}

@@ -1,0 +1,4 @@
+description: Бесплатный бейзлайн - случайные действия (seed фиксирован). Нижняя планка.
+name: Random
+model: {provider: baseline, model: random, params: {seed: 42}}
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}

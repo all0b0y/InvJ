@@ -1,0 +1,9 @@
+description: Laya локально в процессе (pip install -e 'backend[laya]'). Стоимость = время x cost_per_hour_usd.
+name: Laya (local)
+model:
+  provider: laya
+  model: typed-decisions   # "" = авто-роутинг, english (512 токенов), multilingual, typed-decisions (1024)
+  cost_per_hour_usd: 0.40  # цена своего CPU/GPU-часа для сравнения с API
+  params: {device: null}
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}
+features: {window: 20, anonymize: false}

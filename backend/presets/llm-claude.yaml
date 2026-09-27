@@ -1,0 +1,8 @@
+description: Claude через OpenRouter chat/completions, ответ зажат в JSON-схему с теми же вопросами.
+name: Claude Haiku
+model:
+  provider: llm
+  model: anthropic/claude-haiku-4.5
+  params: {temperature: 0, max_tokens: 800, structured: json_schema}
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}
+features: {window: 30}

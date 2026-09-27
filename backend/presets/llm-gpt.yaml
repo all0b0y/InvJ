@@ -1,0 +1,8 @@
+description: GPT через OpenRouter, тот же набор вопросов в JSON.
+name: GPT-5 mini
+model:
+  provider: llm
+  model: openai/gpt-5-mini
+  params: {max_tokens: 2000, structured: json_schema}
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}
+features: {window: 30}

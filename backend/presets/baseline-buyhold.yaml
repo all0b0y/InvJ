@@ -1,0 +1,4 @@
+description: Бесплатный бейзлайн - купить и держать.
+name: Buy & Hold
+model: {provider: baseline, model: buy_and_hold}
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}

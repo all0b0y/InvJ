@@ -1,0 +1,5 @@
+description: Работает без сети и ключей - SMA-бейзлайн на синтетическом CSV (data/csv/SAMPLE-SYNTH.csv).
+name: Demo (offline)
+model: {provider: baseline, model: sma_cross}
+data: {provider: csv, symbol: SAMPLE-SYNTH, interval: 1h, limit: 400}
+run: {delay_ms: 150}

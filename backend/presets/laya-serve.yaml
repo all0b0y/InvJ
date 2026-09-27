@@ -1,0 +1,9 @@
+description: Laya как отдельный сервер (laya-serve, протокол Jev /v1/systemone). Запуск - LAYA_PORT=8001 laya-serve
+name: Laya (laya-serve)
+model:
+  provider: systemone
+  base_url: http://localhost:8001
+  model: typed-decisions
+  cost_per_hour_usd: 0.40
+data: {provider: binance, symbol: BTCUSDT, interval: 1h, start: "2024-01-01", limit: 300}
+features: {window: 20}

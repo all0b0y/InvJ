@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# InvJ
+node_modules/
+backend/data/*.db
+backend/data/*.db-*
+frontend/dist/
